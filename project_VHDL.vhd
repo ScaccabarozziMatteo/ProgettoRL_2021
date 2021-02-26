@@ -30,7 +30,7 @@ end project_reti_logiche;
 
 architecture Behavioral of project_reti_logiche is
 -- Indica gli stati della FSM 
-    type state is (RESET, DIMENSIONS,  );
+    type state is (RESET, DIMENSIONS, GET_PIXELS );
     
     -- Stato corrente e prossimo FSM
     signal state_current, state_next: state;
@@ -45,9 +45,15 @@ architecture Behavioral of project_reti_logiche is
     -- Variabili: EQUALIZZATA, MAX, MIN e OLD dei pixel
     signal new_pixel_value, max_pixel_value, min_pixel_value, current_pixel_value: std_logic_vector(7 downto 0);
     
-    -- Dimensioni immagine
-    signal row, column: std_logic_vector(7 downto 0);
+    -- Contatore per lettura di ogni pixel
+    signal counter: integer range 0 to 16383;
+    signal num_pixels: integer range 0 to 16383;
     
+    -- Dimensioni immagine
+    signal row, column: integer range 0 to 127 := 0;
+    
+    -- Segnali di check
+    signal get_row, get_column, get_pixel: boolean := false;
     
     
     
@@ -64,9 +70,55 @@ begin
         
         case state_current is
             when RESET =>   delta <= "00000000";
-                            address <= "0000000000000010";
-                            shift_value <= "0";
-                            temp_pixel_value
+                            address <= "0000000000000000";
+                            shift_value <= "00000000";
+                            temp_pixel_value <= "00000000";
+                            counter <= 1;
+                            num_pixels <= 0;
+                            
+                            o_en <= '0';
+                            o_we <= '0';
+                            o_data <= "00000000";
+                            o_done <= '0';
+                            -----------------------------
+                            state_next <= DIMENSIONS;
+                            
+            when DIMENSIONS =>   o_en <= '1';
+                                 o_we <= '0';
+            
+                           if (not get_column) then
+                                   address <= "0000000000000000";
+                                   column <= conv_integer(i_data);
+                                   get_column <= false;
+                                   state_next <= DIMENSIONS;
+                                   
+                               elsif (not get_row) then
+                                   address <= "0000000000000001";
+                                   row <= conv_integer(i_data);
+                                   get_row <= false;
+                                   state_next <= GET_PIXELS;
+                                   address <= address + "000000000000000001";
+                                   num_pixels <= column * row;
+                                   
+                               end if;                 
+            
+            when GET_PIXELS =>    o_en <= '1';
+                                  o_we <= '0';
+                                  
+                                  if (not get_pixel) then
+                                    current_pixel_value <= i_data;
+                                    counter <= counter + 1;
+                                    address <= address + "000000000000000001";
+                                    state_next <= GET_PIXELS;
+                                    
+                                        if (counter > num_pixels) then
+                                            get_pixel <= true;  
+                                            state_next <= CALCULATE;
+                                    
+                                                
+                            
+                            
+                            
                             
                             
                             
