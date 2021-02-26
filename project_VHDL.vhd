@@ -26,3 +26,54 @@ entity project_reti_logiche is
       o_data : out std_logic_vector (7 downto 0)
     );
 end project_reti_logiche;
+
+
+architecture Behavioral of project_reti_logiche is
+-- Indica gli stati della FSM 
+    type state is (RESET, DIMENSIONS,  );
+    
+    -- Stato corrente e prossimo FSM
+    signal state_current, state_next: state;
+    -- Indirizzo corrente I/O
+    signal address: std_logic_vector(15 downto 0);
+    -- Delta corrente
+    signal delta: std_logic_vector(7 downto 0);
+    -- Shift_value corrente
+    signal shift_value: std_logic_vector(2 downto 0);
+    -- Temp_pixel value corrente. Il pixel può essere shiftato al più di 8, quindi vettore di 16 bit
+    signal temp_pixel_value: std_logic_vector(15 downto 0);
+    -- Variabili: EQUALIZZATA, MAX, MIN e OLD dei pixel
+    signal new_pixel_value, max_pixel_value, min_pixel_value, current_pixel_value: std_logic_vector(7 downto 0);
+    
+    -- Dimensioni immagine
+    signal row, column: std_logic_vector(7 downto 0);
+    
+    
+    
+    
+    
+begin
+    process (i_clk) 
+    begin
+      if(i_clk'event and i_clk = '1') then
+        if (i_rst = '1') then
+            state_current <= RESET;
+        else
+            state_current <= state_next;
+        end if;
+        
+        case state_current is
+            when RESET =>   delta <= "00000000";
+                            address <= "0000000000000010";
+                            shift_value <= "0";
+                            temp_pixel_value
+                            
+                            
+                            
+                            
+                            
+        end case;
+     end if;
+end process;
+
+end Behavioral;
