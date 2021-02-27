@@ -199,8 +199,11 @@ begin
                             
                             
                            
-        end case;
+         end case;
         end if;
+      end if;
+
     end process;
+
 
 end Behavioral;
