@@ -178,23 +178,29 @@ begin
                                     o_we <= '1';    
                                     
                                     
+                                    o_address <= std_logic_vector(TO_UNSIGNED(address + num_pixels, 16));
                                     o_data <= new_pixel_value;
-                                    --o_address <= address;
                                     counter <= counter + 1;
+                                    address <= address + 1;
                                     
+                                    state_next <= EQUALIZATION;
                                     
                                     if(counter > num_pixels) then
                                         state_next <= DONE;
                                     end if;
                                     
                when DONE =>                               
-                            
+                                    o_en <= '0';
+                                    o_we <= '0';
+                                    o_done <= '1';
+                                    
+                                    state_next <= RESET;
                             
                             
                             
                            
         end case;
         end if;
-end process;
+    end process;
 
 end Behavioral;
