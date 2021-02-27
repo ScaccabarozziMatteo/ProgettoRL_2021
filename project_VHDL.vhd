@@ -76,7 +76,8 @@ begin
         else
         
         case state_next is
-        
+        --se stiamo nel caso RESET perchè il counter lo metti ad 1 se non stiamo leggendo nulla, non dovrebbe rimanere a 0?
+           
             when RESET =>   delta <= "00000000";
                             temp_pixel_value <= "00000000";
                             counter <= 1;
