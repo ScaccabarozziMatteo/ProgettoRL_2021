@@ -87,6 +87,7 @@ begin
                             o_we <= '0';
                             o_data <= "00000000";
                             o_done <= '0';
+                     ----qua setterei il valore di column a true
                             -----------------------------
                             state_next <= DIMENSIONS;
                             
@@ -97,6 +98,7 @@ begin
                                    pixels_array(0) <= i_data;
                                    column <= conv_integer(pixels_array(0));
                                    get_column <= false;
+--qua setterei il valore di row a true in modo tale poi da "entrare" nell'altro ramo
                                    state_next <= DIMENSIONS;
                                    
                                elsif (get_row) then
@@ -133,7 +135,7 @@ begin
                                             all_pixel <= true;
                                             state_next <= INDEXES;
                                   end if; 
-                                  
+                                  --non dovrei mettere anche qui state_next<=INDEXES ? perchè se count non è > num_pixels non cambia stato
                                   if(current_pixel_value < min_pixel_value) then
                                     min_pixel_value <= current_pixel_value;
                                     
