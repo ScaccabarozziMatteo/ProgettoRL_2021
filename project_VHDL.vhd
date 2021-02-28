@@ -158,11 +158,10 @@ begin
 --verifico il valorre del singolo bit con if(delta(i) però se lo metti su vhdl mi da un errore sul case ,avrò sbagliato qualche sintassi ma il concetto mi sembra tornare
   delta <= max_pixel_value - min_pixel_value;
                                    delta_prov <= conv_integer(delta);
-                                   
+                                   --esco dal ciclo quando trovo il primo 1, in base alla posizione di tale 1 avrò un certo valore di delta_prov
                                    for I in 0 to 7 loop
                                    
-                                   
-                                   if(delta(I)=1)
+                                   exit when delta(I)=1;
         
                                   
                                    case i is 
