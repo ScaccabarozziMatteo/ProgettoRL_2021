@@ -148,23 +148,15 @@ begin
               when INDEXES =>
                                   o_en <= '0';
                                   o_we <= '0';
-                                  
-                                  delta <= max_pixel_value - min_pixel_value;
-                                  logarithm <= log2(real(to_integer(signed(delta + 1))));
-                                  shift_value <= 8 - integer(floor(logarithm));
-                                ------pensavo invece di fare log2 cicliamo tutti i bit del pixel quindi da 0 a 7 ,se il bit è 1 allora verifichiamo in che pos si trovi con i vari case in modo poi da
---assegnargli come floor appunto la distanza dal bit meno significativo fino al primo 1 a sinistra quindi appunto se è in posizion 0 il bit '1' -->7-0=7 caso di log2(128)=7
---converto in intero il delta
---verifico il valorre del singolo bit con if(delta(i) però se lo metti su vhdl mi da un errore sul case ,avrò sbagliato qualche sintassi ma il concetto mi sembra tornare
-  delta <= max_pixel_value - min_pixel_value;
+                                delta <= max_pixel_value - min_pixel_value;
                                    delta_prov <= conv_integer(delta);
                                    
-                                   for I in 0 to 7 loop
+                                   for i in 0 to 7 loop
                                    
                                    
-                                   if(delta(I)=1)
+                                  exit when delta(i)='1';
         
-                                  
+                                  end loop;
                                    case i is 
                                    when 0 =>
                                    delta_prov <=7;
@@ -190,10 +182,9 @@ begin
                                    when 7 =>
                                      delta_prov<=0;
                                      
-                                     end if
-                                      shift_value <= 8 - delta_prov);)                                  -- Resetta contatore e address per dopo
-                                            counter <= 1;
-                                            address <= 2;
+                                     end case;
+                                           
+                                      shift_value <= 8 - delta_prov;
                                   
                -- Esegui l'equalizzazione dell'istogramma di un pixel                   
                when EQUALIZATION =>
