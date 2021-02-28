@@ -152,8 +152,46 @@ begin
                                   delta <= max_pixel_value - min_pixel_value;
                                   logarithm <= log2(real(to_integer(signed(delta + 1))));
                                   shift_value <= 8 - integer(floor(logarithm));
+                                ------pensavo invece di fare log2 cicliamo tutti i bit del pixel quindi da 0 a 7 ,se il bit è 1 allora verifichiamo in che pos si trovi con i vari case in modo poi da
+--assegnargli come floor appunto la distanza dal bit meno significativo fino al primo 1 a sinistra quindi appunto se è in posizion 0 il bit '1' -->7-0=7 caso di log2(128)=7
+--converto in intero il delta
+--verifico il valorre del singolo bit con if(delta(i) però se lo metti su vhdl mi da un errore sul case ,avrò sbagliato qualche sintassi ma il concetto mi sembra tornare
+  delta <= max_pixel_value - min_pixel_value;
+                                   delta_prov <= conv_integer(delta);
+                                   
+                                   for I in 0 to 7 loop
+                                   
+                                   
+                                   if(delta(I)=1)
+        
                                   
-                                  -- Resetta contatore e address per dopo
+                                   case i is 
+                                   when 0 =>
+                                   delta_prov <=7;
+                                   
+                                   when 1 =>
+                                   delta_prov<=6;
+                                   
+                                   when 2 =>
+                                   delta_prov<=5;
+                                   
+                                   when 3 =>
+                                   delta_prov<=4;
+                                   
+                                   when 4 =>
+                                   delta_prov<=3;
+                                   
+                                   when 5 =>
+                                   delta_prov<=2;
+                          
+                                   when 6 =>
+                                   delta_prov<=1;
+                                
+                                   when 7 =>
+                                     delta_prov<=0;
+                                     
+                                     end if
+                                      shift_value <= 8 - delta_prov);)                                  -- Resetta contatore e address per dopo
                                             counter <= 1;
                                             address <= 2;
                                   
