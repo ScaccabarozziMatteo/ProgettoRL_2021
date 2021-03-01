@@ -79,46 +79,57 @@ architecture Behavioral of project_reti_logiche is
     
     
 begin
-    process(i_clk) 
+    state_reg: process(i_clk, i_rst) 
     begin
-      if(i_clk'event and i_clk = '0') then
+      if (rising_edge(i_clk)) then
         if (i_rst = '1') then
-            state_next <= RESET;
-            
-        else
+           state_next <= RESET;
+           
+        elsif (i_rst = '0') then                 
+          case state_next is
         
-        case state_next is
-        
-            when RESET =>   delta <= "00000000";
+            when RESET =>   
+                            delta <= "00000000";
                             temp_pixel_value <= 0;
                             counter <= 1;
                             num_pixels <= 0;
                             
-                            o_en <= '0';
+                            o_en <= '1';
                             o_we <= '0';
-                            o_data <= "00000000";
+                            o_data <= (others => '0');
                             o_done <= '0';
-                            get_column <= false;
-                            get_row <= false;
+                            -- o_address <= std_logic_vector(TO_UNSIGNED());
+                            get_column <= true;
+                            get_row <= true;
                             all_pixel <= false;
                             -----------------------------
                             state_next <= DIMENSIONS;
+                            
+                            if(i_start <= '1') then
+                                o_en <= '1'; -- Manda 1 alla RAM per comunicare             
+                                o_we <= '0';
+                            else
+                                state_next <= RESET;
+                            end if;
                             
             when DIMENSIONS =>   o_en <= '1';
                                  o_we <= '0';
             
                                if (get_column) then
+                                   o_address <= "0000000000000000";
                                    pixels_array(0) <= i_data;
                                    column <= conv_integer(pixels_array(0));
                                    get_column <= false;
                                    state_next <= DIMENSIONS;
                                    
                                elsif (get_row) then
+                                   o_address <= "0000000000000001";
                                    pixels_array(1) <= i_data;
                                    row <= conv_integer(pixels_array(1));
                                    get_row <= false;
                                    state_next <= GET_PIXELS;
                                    address <= 2;
+                                   o_address <= std_logic_vector(TO_UNSIGNED(address, 16));
                                    num_pixels <= column * row;
                                    
                                end if;               
@@ -132,6 +143,7 @@ begin
                                     pixels_array(address) <= current_pixel_value;
                                     counter <= counter + 1;
                                     address <= address + 1;
+                                    o_address <= std_logic_vector(TO_UNSIGNED(address, 16));
                                     state_next <= MAX_MIN;
                                     
                                   else
@@ -167,6 +179,7 @@ begin
                                   -- Resetta contatore e address per dopo
                                             counter <= 1;
                                             address <= 2;
+                                  state_next <= EQUALIZATION;
                                   
                -- Esegui l'equalizzazione dell'istogramma di un pixel                   
                when EQUALIZATION =>
@@ -215,8 +228,7 @@ begin
                            
          end case;
         end if;
-      end if;
-
+       end if;
     end process;
     
 end Behavioral;
