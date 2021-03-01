@@ -12,7 +12,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 use IEEE.NUMERIC_STD.ALL;
-use IEEE.MATH_REAL.ALL;
+-- use IEEE.MATH_REAL.ALL;
 -- use IEEE.STD_LOGIC_ARITH.ALL;
 
 
@@ -37,6 +37,19 @@ architecture Behavioral of project_reti_logiche is
     -- Definisci struttura array
     type Memory_Pixels is array (16385 downto 0) of std_logic_vector(7 downto 0);
     
+    -- LOOKUP TABLE che rappresenta il log2 dal valore 1 al valore 256
+    type array_log is array (0 to 255) of integer range 0 to 8;
+    constant LUT_LOG  : array_log := (
+                                      0           => 0, 
+                                      1   to 2    => 1,
+                                      3   to 6    => 2,
+                                      7   to 14   => 3,
+                                      15  to 30   => 4,
+                                      31  to 62   => 5,
+                                      63  to 126  => 6,
+                                      127 to 254  => 7,
+                                      255         => 8);                                                                        
+    
     -- Stato corrente e prossimo FSM
     signal state_next: state;
     -- Array contenten indirizzo e valore del pixel corrente
@@ -45,12 +58,9 @@ architecture Behavioral of project_reti_logiche is
     signal delta: std_logic_vector(7 downto 0);
     -- Shift_value corrente
     signal shift_value: integer := 0;
-    -- Temp_pixel value corrente. Il pixel può essere shiftato al più di 8, quindi vettore di 16 bit
-    signal temp_pixel_value: std_logic_vector(15 downto 0);
     -- Variabili: EQUALIZZATA, MAX, MIN e OLD dei pixel
     signal new_pixel_value, max_pixel_value, min_pixel_value, current_pixel_value: std_logic_vector(7 downto 0);
-    signal curr_min: unsigned;
-    signal logarithm: real;
+    signal curr_min: unsigned(7 downto 0);
     
     -- Contatore per lettura di ogni pixel
     signal counter: integer range 0 to 16383;
@@ -62,6 +72,8 @@ architecture Behavioral of project_reti_logiche is
     
     -- Segnali di check
     signal get_row, get_column, all_pixel: boolean := false;
+    
+    signal temp_pixel_value: integer;
     
     
     
@@ -76,10 +88,9 @@ begin
         else
         
         case state_next is
-        --se stiamo nel caso RESET perchè il counter lo metti ad 1 se non stiamo leggendo nulla, non dovrebbe rimanere a 0?
-           
+        
             when RESET =>   delta <= "00000000";
-                            temp_pixel_value <= "00000000";
+                            temp_pixel_value <= 0;
                             counter <= 1;
                             num_pixels <= 0;
                             
@@ -87,7 +98,9 @@ begin
                             o_we <= '0';
                             o_data <= "00000000";
                             o_done <= '0';
-                     ----qua setterei il valore di column a true
+                            get_column <= false;
+                            get_row <= false;
+                            all_pixel <= false;
                             -----------------------------
                             state_next <= DIMENSIONS;
                             
@@ -98,7 +111,6 @@ begin
                                    pixels_array(0) <= i_data;
                                    column <= conv_integer(pixels_array(0));
                                    get_column <= false;
---qua setterei il valore di row a true in modo tale poi da "entrare" nell'altro ramo
                                    state_next <= DIMENSIONS;
                                    
                                elsif (get_row) then
@@ -135,7 +147,7 @@ begin
                                             all_pixel <= true;
                                             state_next <= INDEXES;
                                   end if; 
-                                  --non dovrei mettere anche qui state_next<=INDEXES ? perchè se count non è > num_pixels non cambia stato
+                                  
                                   if(current_pixel_value < min_pixel_value) then
                                     min_pixel_value <= current_pixel_value;
                                     
@@ -149,49 +161,10 @@ begin
                                   o_en <= '0';
                                   o_we <= '0';
                                   
-                                  delta <= max_pixel_value - min_pixel_value;
-                                  logarithm <= log2(real(to_integer(signed(delta + 1))));
-                                  shift_value <= 8 - integer(floor(logarithm));
-                                ------pensavo invece di fare log2 cicliamo tutti i bit del pixel quindi da 0 a 7 ,se il bit è 1 allora verifichiamo in che pos si trovi con i vari case in modo poi da
---assegnargli come floor appunto la distanza dal bit meno significativo fino al primo 1 a sinistra quindi appunto se è in posizion 0 il bit '1' -->7-0=7 caso di log2(128)=7
---converto in intero il delta
---verifico il valorre del singolo bit con if(delta(i) però se lo metti su vhdl mi da un errore sul case ,avrò sbagliato qualche sintassi ma il concetto mi sembra tornare
-  delta <= max_pixel_value - min_pixel_value;
-                                   delta_prov <= conv_integer(delta);
-                                   
-                                   for I in 0 to 7 loop
-                                   
-                                   
-                                   if(delta(I)=1)
-        
-                                  
-                                   case i is 
-                                   when 0 =>
-                                   delta_prov <=7;
-                                   
-                                   when 1 =>
-                                   delta_prov<=6;
-                                   
-                                   when 2 =>
-                                   delta_prov<=5;
-                                   
-                                   when 3 =>
-                                   delta_prov<=4;
-                                   
-                                   when 4 =>
-                                   delta_prov<=3;
-                                   
-                                   when 5 =>
-                                   delta_prov<=2;
-                          
-                                   when 6 =>
-                                   delta_prov<=1;
-                                
-                                   when 7 =>
-                                     delta_prov<=0;
-                                     
-                                     end if
-                                      shift_value <= 8 - delta_prov);)                                  -- Resetta contatore e address per dopo
+                                  delta <= max_pixel_value - min_pixel_value;                            
+                                  shift_value <= 8 - LUT_LOG(conv_integer(delta));
+                                                                    
+                                  -- Resetta contatore e address per dopo
                                             counter <= 1;
                                             address <= 2;
                                   
@@ -203,10 +176,10 @@ begin
                                   current_pixel_value <= pixels_array(address);
                                   
                                   curr_min <= unsigned(current_pixel_value - min_pixel_value);                 
-                                  temp_pixel_value <= std_logic_vector(curr_min sll integer(shift_value));
+                                  temp_pixel_value <= TO_INTEGER(curr_min sll integer(shift_value));
                                   
                                   if(temp_pixel_value < 255) then
-                                    new_pixel_value <= temp_pixel_value;
+                                    new_pixel_value <= std_logic_vector(TO_UNSIGNED(temp_pixel_value, 8));
                                   
                                   else
                                     new_pixel_value <= std_logic_vector(TO_UNSIGNED(255, 8));
@@ -245,6 +218,5 @@ begin
       end if;
 
     end process;
-
-
+    
 end Behavioral;
