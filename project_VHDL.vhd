@@ -2,8 +2,7 @@
 -- Progetto di Reti Logiche
 -- SCACCABAROZZI MATTEO - ALEXANDER TENEMAYA
 --
--- A.A. 2020/2021
--- Prof. Palermo Gianluca
+-- A.A. 2020/2- Prof. Palermo Gianluca
 -- 
 ----------------------------------------------------------
 
@@ -12,8 +11,6 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 use IEEE.NUMERIC_STD.ALL;
--- use IEEE.MATH_REAL.ALL;
--- use IEEE.STD_LOGIC_ARITH.ALL;
 
 
 entity project_reti_logiche is
@@ -33,9 +30,9 @@ end project_reti_logiche;
 
 architecture Behavioral of project_reti_logiche is
     -- Indica gli stati della FSM 
-    type state is (START, RESET, GET_COLUMN, GET_ROW, NUM_PIXELS1, GET_PIXELS, MAX_MIN, DELTA1, SHIFT, EQUALIZATION1, EQUALIZATION2, EQUALIZATION3, EQUALIZATION4, WRITE_OUT, WRITE_OUT2, DONE);
+    type state is (IDLE, SAVE_COLUMN, START, RESET, GET_COLUMN, GET_ROW, NUM_PIXELS1, GET_PIXELS, MAX_MIN, DELTA1, SHIFT, EQUALIZATION1, EQUALIZATION2, EQUALIZATION3, EQUALIZATION4, WRITE_OUT, WRITE_OUT2, DONE);
     -- Definisci struttura array
-    type Memory_Pixels is array (16385 downto 0) of std_logic_vector(7 downto 0);
+    --type Memory_Pixels is array (16383 downto 0) of std_logic_vector(7 downto 0);
     
     -- LOOKUP TABLE che rappresenta il log2 dal valore 1 al valore 256
     type array_log is array (0 to 255) of integer range 0 to 8;
@@ -53,7 +50,7 @@ architecture Behavioral of project_reti_logiche is
     -- Stato corrente e prossimo FSM
     signal state_next: state := START;
     -- Array contenten indirizzo e valore del pixel corrente
-    signal pixels_array: Memory_Pixels := (others => (others => '0'));
+    --signal pixels_array: Memory_Pixels := (others => (others => '0'));
     -- Delta corrente
     signal delta: std_logic_vector(7 downto 0);
     -- Shift_value corrente
@@ -63,9 +60,10 @@ architecture Behavioral of project_reti_logiche is
     signal curr_min: unsigned(7 downto 0) := (others => '0');
     
     -- Contatore per lettura di ogni pixel
-    signal counter: integer range 0 to 16383;
+    signal counter: std_logic_vector(15 downto 0);
     signal num_pixels: integer range 0 to 16383;
-    signal address: integer range 0 to 16385;
+    signal address: std_logic_vector(15 downto 0);
+    signal temp_add: unsigned(15 downto 0);
     
     -- Dimensioni immagine
     signal row, column: integer range 0 to 127 := 0;
@@ -84,62 +82,90 @@ begin
          begin
           if rising_edge(i_clk) then
             if (i_rst = '1') then
-                state_next <= START;
+                counter <= "0000000000000000";                            
+                o_en <= '1';
+                o_we <= '0';
+                state_next <= RESET;
+                
             end if;
             if (i_start = '1') then
                     o_en <= '1';
                    state_next <= RESET;
-            end if;
-    
-           
-          case state_next is
-          
-            when START => 
-        
-            when RESET =>   
-
-                            counter <= 0;                            
+            else
+                state_next <= IDLE;
+                            counter <= "0000000000000000";                            
                             o_en <= '1';
                             o_we <= '0';
                             o_done <= '0';
                             min_pixel_value <= "00000000";
                             max_pixel_value <= "00000000";
                             all_pixel <= false;
-                            o_address <= "0000000000000000";                            
-
+                            min_settato <= false;
+                            o_address <= "0000000000000000";
+                            address <= "0000000000000000";
+            end if;
+    
+           
+          case state_next is
+            
+            when IDLE =>
+          
+            when START => 
+                            o_en <= '1';
+        
+            when RESET =>   counter <= "0000000000000000";                            
+                            o_en <= '1';
+                            o_we <= '0';
+                            o_done <= '0';
+                            min_pixel_value <= "00000000";
+                            max_pixel_value <= "00000000";
+                            all_pixel <= false;
+                            min_settato <= false;
+                            o_address <= "0000000000000000";
+                            address <= "0000000000000000";
+                                                        
                             state_next <= GET_COLUMN;
 
                             
-            when GET_COLUMN =>   o_en <= '1';
-                                 o_we <= '0';
-            
-                                   pixels_array(0) <= i_data;
-                                   column <= CONV_INTEGER(i_data);
-                                   state_next <= GET_ROW;
-                                   address <= 1;
+            when GET_COLUMN =>     o_en <= '1';
+                                   o_we <= '0';
                                    o_address <= "0000000000000001";
                                    
-            when GET_ROW =>     o_en <= '1';
-                                o_we <= '0';
+                                -- pixels_array(0) <= i_data;
+                                   column <= CONV_INTEGER(i_data);
+                                   state_next <= SAVE_COLUMN;
+                                   address <= "0000000000000001";
+           
+            when SAVE_COLUMN =>    o_en <= '1';
+                                   o_we <= '0';
+                                   
+                                   state_next <= GET_ROW; 
+                                   
+                                   
+            when GET_ROW =>        o_en <= '1';
+                                   o_we <= '0';
                                 
-                                   pixels_array(1) <= i_data;
+                                -- pixels_array(1) <= i_data;
                                    row <= CONV_INTEGER(i_data);
                                    state_next <= NUM_PIXELS1;
-                                   address <= 2;
+                                   address <= "0000000000000010";
                                    o_address <= "0000000000000010";
            
-             when NUM_PIXELS1 => num_pixels <= column * row;
-                                state_next <= GET_PIXELS;
+             when NUM_PIXELS1 => 
                                 o_en <= '1';
+                                o_we <= '0';
+                                
+                                num_pixels <= column * row;
+                                state_next <= GET_PIXELS;
              
                                  
             -- Stato GET_PIXELS salva i pixel
             when GET_PIXELS =>    
                                   if (not all_pixel) then
                                     current_pixel_value <= i_data;
-                                    pixels_array(address) <= i_data;
+                                 -- pixels_array(address) <= i_data;
                                     counter <= counter + 1;
-                                    o_address <= std_logic_vector(TO_UNSIGNED(address + 1, 16));
+                                    o_address <= address + "0000000000000001";
                                     address <= address + 1;
                                     state_next <= MAX_MIN;
                                     
@@ -150,6 +176,8 @@ begin
              -- Stato MAX_MIN calcola gli indici MAX e MIN necessari all'elaborazione dell'immagine                               
              when MAX_MIN =>                  
                                   state_next <= GET_PIXELS;
+                                  o_en <= '1';
+                                  o_we <= '0';
                                   
                                   if(not min_settato) then
                                     min_pixel_value <= current_pixel_value;
@@ -170,20 +198,21 @@ begin
                                   
               -- Stato INDEXES calcola gli indici per poter fare l'equalizzazione dell'istogramma                      
               when DELTA1 =>
-                                  o_en <= '0';
+                                  o_en <= '1';
                                   o_we <= '0';
                                   
                                   delta <= max_pixel_value - min_pixel_value; 
                                   state_next <= SHIFT;
                                   
               -- Resetta contatore e address per dopo
-                                  counter <= 0;
-                                  address <= 2;
+                                  counter <= "0000000000000000";
+                                  o_address <= "0000000000000010";
+                                  
                                                                   
               when SHIFT =>       shift_value <= 8 - LUT_LOG(conv_integer(delta));
                                                                     
                                   state_next <= EQUALIZATION1;
-                                  current_pixel_value <= pixels_array(address);
+                                  current_pixel_value <= i_data;
                                   
                -- Esegui l'equalizzazione dell'istogramma di un pixel                   
                when EQUALIZATION1 =>
@@ -209,17 +238,23 @@ begin
                                   end if;
                                   
                                   state_next <= EQUALIZATION4;
+                                  temp_add <= TO_UNSIGNED(num_pixels, 16);
                                   
                when EQUALIZATION4 =>
-                                  pixels_array(address + num_pixels) <= new_pixel_value;
-                                  o_address <= std_logic_vector(TO_UNSIGNED(address + num_pixels - 1, 16));
+                                  -- pixels_array(address + num_pixels) <= new_pixel_value;
+                                  o_address <= address + std_logic_vector(temp_add);
                                   
                                   counter <= counter + 1;
                                   state_next <= WRITE_OUT;
+                                  o_en <= '1';
+                                  o_we <= '1'; 
                                   
-              when WRITE_OUT =>        
+              when WRITE_OUT =>     
+                                    o_en <= '1';
+                                    o_we <= '1';   
                                     o_data <= new_pixel_value;
-                                    address <= address + 1;
+                                    o_address <= address + "0000000000000001";
+                                    address <= address + "0000000000000001";
                                     state_next <= WRITE_OUT2;
                                     
                                     if(counter > num_pixels) then
@@ -227,15 +262,16 @@ begin
                                     end if;
                                    
                when WRITE_OUT2 =>
-                                    current_pixel_value <= pixels_array(address);
+                                    current_pixel_value <= i_data;
                                     state_next <= EQUALIZATION1;
                 
                when DONE =>                               
-                                    o_en <= '0';
+                                    o_en <= '1';
                                     o_we <= '0';
                                     o_done <= '1';
+                                    o_address <= "0000000000000000";
                                     
-                                    state_next <= RESET;
+                                    state_next <= IDLE;
                             
                             
                             
