@@ -30,7 +30,7 @@ end project_reti_logiche;
 
 architecture Behavioral of project_reti_logiche is
     -- Indica gli stati della FSM 
-    type state is (IDLE, SAVE_COLUMN, START, RESET, GET_COLUMN, GET_ROW, NUM_PIXELS1, GET_PIXELS, MAX_MIN, DELTA1, DELTA2, SHIFT, EQUALIZATION1, EQUALIZATION1_1, EQUALIZATION1_2, EQUALIZATION1_3, EQUALIZATION2, EQUALIZATION3, EQUALIZATION3_1, EQUALIZATION3_2, EQUALIZATION4, WRITE_OUT, WRITE_OUT1, WRITE_OUT2, DONE);
+    type state is (IDLE, SAVE_COLUMN, START, RESET, GET_COLUMN, GET_ROW, NUM_PIXELS1, GET_PIXELS, MAX_MIN, DELTA1, DELTA2, SHIFT, EQUALIZATION1, EQUALIZATION1_1, EQUALIZATION1_2, EQUALIZATION1_3, EQUALIZATION2, EQUALIZATION3, EQUALIZATION3_1, EQUALIZATION3_2, EQUALIZATION4, WRITE_OUT, WRITE_OUT1, WRITE_OUT2, DONE, LAST);
     -- Definisci struttura array
     --type Memory_Pixels is array (16383 downto 0) of std_logic_vector(7 downto 0);
     
@@ -77,7 +77,7 @@ architecture Behavioral of project_reti_logiche is
     
     
 begin
-       process (i_clk, i_rst, i_start)
+       process (i_clk, i_rst)
          begin
           if rising_edge(i_clk) then
             if (i_rst = '1') then
@@ -92,9 +92,9 @@ begin
             end if;
             if (i_start = '1') then
                     o_en <= '1';
-                   state_next <= GET_COLUMN;
-            else
-                state_next <= IDLE;
+                   state_next <= START;
+            elsif (i_start = '0') then
+                          state_next <= IDLE;
                             counter <= "0000000000000000";                            
                             o_en <= '1';
                             o_we <= '0';
@@ -107,16 +107,23 @@ begin
                             address_curr <= "0000000000000000";
                             address_new <= "0000000000000000";
                             shift_value <= 0;
+                            state_next <= IDLE;
             end if;
     
            
           case state_next is
             
-            when IDLE =>
+            when IDLE =>    
+                            if (i_start = '1') then
+						        state_next <= START;
+					        else
+						        state_next <= IDLE;
+					        end if;
+                           
           
             when START => 
                             o_en <= '1';
-                            state_next <= RESET;
+                            state_next <= GET_COLUMN;
         
             when RESET =>   counter <= "0000000000000000";                            
                             o_en <= '1';
@@ -131,7 +138,7 @@ begin
                             address_new <= "0000000000000000";
                             shift_value <= 0;
                                                         
-                            state_next <= GET_COLUMN;
+                            state_next <= START;
 
                             
             when GET_COLUMN =>     o_en <= '1';
@@ -311,13 +318,15 @@ begin
                                     state_next <= EQUALIZATION1_1;
                 
                when DONE =>                               
-                                    o_en <= '1';
+                                    o_en <= '0';
                                     o_we <= '0';
                                     o_done <= '1';
-                                    o_address <= "0000000000000000";
+                                  --o_address <= "0000000000000000";
                                     
-                                    state_next <= IDLE;
-                            
+                                    state_next <= LAST;
+                                    
+               when LAST =>         o_done <= '0';
+                                    state_next <= IDLE;                            
                             
                             
                            
