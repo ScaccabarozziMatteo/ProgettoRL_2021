@@ -30,7 +30,7 @@ end project_reti_logiche;
 
 architecture Behavioral of project_reti_logiche is
     -- Indica gli stati della FSM 
-    type state is (IDLE, SAVE_COLUMN, START, RESET, GET_COLUMN, GET_ROW, NUM_PIXELS1, GET_PIXELS, MAX_MIN, DELTA1, DELTA2, SHIFT, EQUALIZATION1, EQUALIZATION1_1, EQUALIZATION1_2, EQUALIZATION1_3, EQUALIZATION2, EQUALIZATION3, EQUALIZATION3_1, EQUALIZATION4, WRITE_OUT, WRITE_OUT1, WRITE_OUT2, DONE);
+    type state is (IDLE, SAVE_COLUMN, START, RESET, GET_COLUMN, GET_ROW, NUM_PIXELS1, GET_PIXELS, MAX_MIN, DELTA1, DELTA2, SHIFT, EQUALIZATION1, EQUALIZATION1_1, EQUALIZATION1_2, EQUALIZATION1_3, EQUALIZATION2, EQUALIZATION3, EQUALIZATION3_1, EQUALIZATION3_2, EQUALIZATION4, WRITE_OUT, WRITE_OUT1, WRITE_OUT2, DONE);
     -- Definisci struttura array
     --type Memory_Pixels is array (16383 downto 0) of std_logic_vector(7 downto 0);
     
@@ -63,7 +63,7 @@ architecture Behavioral of project_reti_logiche is
     signal counter: std_logic_vector(15 downto 0);
     signal num_pixels: integer range 0 to 16383;
     signal address_curr, address_new: std_logic_vector(15 downto 0);
-    signal temp_add: unsigned(15 downto 0);
+    signal temp_add, temp_pixel_value: unsigned(15 downto 0);
     
     -- Dimensioni immagine
     signal row, column: integer range 0 to 127 := 0;
@@ -71,7 +71,6 @@ architecture Behavioral of project_reti_logiche is
     -- Segnali di check
     signal all_pixel, min_settato: boolean := false;
     
-    signal temp_pixel_value: integer;
     signal temporary: std_logic_vector(15 downto 0);
     
     
@@ -104,6 +103,7 @@ begin
                             o_address <= "0000000000000000";
                             address_curr <= "0000000000000000";
                             address_new <= "0000000000000000";
+                            shift_value <= 0;
             end if;
     
            
@@ -125,6 +125,7 @@ begin
                             o_address <= "0000000000000000";
                             address_curr <= "0000000000000000";
                             address_new <= "0000000000000000";
+                            shift_value <= 0;
                                                         
                             state_next <= GET_COLUMN;
 
@@ -188,7 +189,7 @@ begin
                                     min_settato <= true;
                                   end if;
                                   
-                                  if (counter >= num_pixels) then
+                                  if (counter > num_pixels) then
                                             all_pixel <= true;
                                             state_next <= DELTA1; 
                                   
@@ -241,24 +242,23 @@ begin
                                   
                when EQUALIZATION1_3 =>
                              
-                                  temporary <= std_logic_vector(resize(signed(curr_min), 16));
+                                  temporary <= std_logic_vector(resize(unsigned(curr_min), 16));
                                   state_next <= EQUALIZATION2;
                                   o_en <= '1';
                                   o_we <= '0';
                                   
                when EQUALIZATION2 =>                   
-                                  temp_pixel_value <= TO_INTEGER(unsigned(temporary) sll integer(shift_value));
+                                  temp_pixel_value <= unsigned(temporary) sll integer(shift_value);
                                   state_next <= EQUALIZATION3;
                                   o_address <= address_new;
                                   
                when EQUALIZATION3 => 
                                   -- Attiva scrittura per il prossimo stato
                                   o_en <= '1';
-                                  o_we <= '1';
-                                  
+                                  o_we <= '0';           
                                                     
                                   if(temp_pixel_value < 255) then
-                                    new_pixel_value <= std_logic_vector(TO_UNSIGNED(temp_pixel_value, 8));
+                                    new_pixel_value <= std_logic_vector(resize(temp_pixel_value, 8));
                                   
                                   else
                                     new_pixel_value <= std_logic_vector(TO_UNSIGNED(255, 8));
@@ -266,8 +266,13 @@ begin
                                  
                                   state_next <= EQUALIZATION3_1;
                                  
+                when EQUALIZATION3_1 =>
+                                    -- Attiva scrittura per il prossimo stato
+                                    o_en <= '1';
+                                    o_we <= '1';
+                                    state_next <= EQUALIZATION3_2;
                                   
-                when EQUALIZATION3_1 =>  
+                when EQUALIZATION3_2 =>  
                                     o_data <= new_pixel_value;
                                     state_next <= EQUALIZATION4;
                                   
@@ -278,7 +283,7 @@ begin
                                   counter <= counter + 1;
                                   state_next <= WRITE_OUT;
                                   o_en <= '1';
-                                  o_we <= '1'; 
+                                  o_we <= '0'; 
                                   
               when WRITE_OUT =>   state_next <= WRITE_OUT1;
                                   o_en <= '1';
