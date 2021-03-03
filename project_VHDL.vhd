@@ -48,7 +48,7 @@ architecture Behavioral of project_reti_logiche is
                                       255         => 8);                                                                        
     
     -- Stato corrente e prossimo FSM
-    signal state_next: state := START;
+    signal state_next: state := IDLE;
     -- Array contenten indirizzo e valore del pixel corrente
     --signal pixels_array: Memory_Pixels := (others => (others => '0'));
     -- Delta corrente
@@ -81,7 +81,10 @@ begin
          begin
           if rising_edge(i_clk) then
             if (i_rst = '1') then
-                counter <= "0000000000000000";                            
+                counter <= "0000000000000000"; 
+                o_address <= "0000000000000000";
+                address_curr <= "0000000000000000";
+                address_new <= "0000000000000000";                           
                 o_en <= '1';
                 o_we <= '0';
                 state_next <= RESET;
@@ -89,7 +92,7 @@ begin
             end if;
             if (i_start = '1') then
                     o_en <= '1';
-                   state_next <= RESET;
+                   state_next <= GET_COLUMN;
             else
                 state_next <= IDLE;
                             counter <= "0000000000000000";                            
@@ -113,6 +116,7 @@ begin
           
             when START => 
                             o_en <= '1';
+                            state_next <= RESET;
         
             when RESET =>   counter <= "0000000000000000";                            
                             o_en <= '1';
