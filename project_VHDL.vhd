@@ -30,7 +30,7 @@ end project_reti_logiche;
 
 architecture Behavioral of project_reti_logiche is
     -- Indica gli stati della FSM 
-    type state is (IDLE, SAVE_COLUMN, START, RESET, GET_COLUMN, GET_ROW, NUM_PIXELS1, GET_PIXELS, MAX_MIN, DELTA1, SHIFT, EQUALIZATION1, EQUALIZATION2, EQUALIZATION3, EQUALIZATION4, WRITE_OUT, WRITE_OUT2, DONE);
+    type state is (IDLE, SAVE_COLUMN, START, RESET, GET_COLUMN, GET_ROW, NUM_PIXELS1, GET_PIXELS, MAX_MIN, DELTA1, DELTA2, SHIFT, EQUALIZATION1, EQUALIZATION1_1, EQUALIZATION1_2, EQUALIZATION1_3, EQUALIZATION2, EQUALIZATION3, EQUALIZATION3_1, EQUALIZATION4, WRITE_OUT, WRITE_OUT1, WRITE_OUT2, DONE);
     -- Definisci struttura array
     --type Memory_Pixels is array (16383 downto 0) of std_logic_vector(7 downto 0);
     
@@ -62,7 +62,7 @@ architecture Behavioral of project_reti_logiche is
     -- Contatore per lettura di ogni pixel
     signal counter: std_logic_vector(15 downto 0);
     signal num_pixels: integer range 0 to 16383;
-    signal address: std_logic_vector(15 downto 0);
+    signal address_curr, address_new: std_logic_vector(15 downto 0);
     signal temp_add: unsigned(15 downto 0);
     
     -- Dimensioni immagine
@@ -102,7 +102,8 @@ begin
                             all_pixel <= false;
                             min_settato <= false;
                             o_address <= "0000000000000000";
-                            address <= "0000000000000000";
+                            address_curr <= "0000000000000000";
+                            address_new <= "0000000000000000";
             end if;
     
            
@@ -122,7 +123,8 @@ begin
                             all_pixel <= false;
                             min_settato <= false;
                             o_address <= "0000000000000000";
-                            address <= "0000000000000000";
+                            address_curr <= "0000000000000000";
+                            address_new <= "0000000000000000";
                                                         
                             state_next <= GET_COLUMN;
 
@@ -134,7 +136,7 @@ begin
                                 -- pixels_array(0) <= i_data;
                                    column <= CONV_INTEGER(i_data);
                                    state_next <= SAVE_COLUMN;
-                                   address <= "0000000000000001";
+                                   address_curr <= "0000000000000001";
            
             when SAVE_COLUMN =>    o_en <= '1';
                                    o_we <= '0';
@@ -148,7 +150,7 @@ begin
                                 -- pixels_array(1) <= i_data;
                                    row <= CONV_INTEGER(i_data);
                                    state_next <= NUM_PIXELS1;
-                                   address <= "0000000000000010";
+                                   address_curr <= "0000000000000010";
                                    o_address <= "0000000000000010";
            
              when NUM_PIXELS1 => 
@@ -161,12 +163,14 @@ begin
                                  
             -- Stato GET_PIXELS salva i pixel
             when GET_PIXELS =>    
+                                 -- Converti num_pixels in Unsigned per dopo
+                                  temp_add <= TO_UNSIGNED(num_pixels, 16);
                                   if (not all_pixel) then
                                     current_pixel_value <= i_data;
                                  -- pixels_array(address) <= i_data;
                                     counter <= counter + 1;
-                                    o_address <= address + "0000000000000001";
-                                    address <= address + 1;
+                                    o_address <= address_curr + "0000000000000001";
+                                    address_curr <= address_curr + 1;
                                     state_next <= MAX_MIN;
                                     
                                   else
@@ -202,33 +206,56 @@ begin
                                   o_we <= '0';
                                   
                                   delta <= max_pixel_value - min_pixel_value; 
-                                  state_next <= SHIFT;
+                                  state_next <= DELTA2;
                                   
               -- Resetta contatore e address per dopo
                                   counter <= "0000000000000000";
                                   o_address <= "0000000000000010";
+                                  address_curr <= "0000000000000010";
                                   
+              when DELTA2 =>      state_next <= SHIFT;
+                                  o_en <= '1';
+                                  o_we <= '0';
                                                                   
               when SHIFT =>       shift_value <= 8 - LUT_LOG(conv_integer(delta));
                                                                     
                                   state_next <= EQUALIZATION1;
                                   current_pixel_value <= i_data;
+                                  o_en <= '1';
+                                  o_we <= '0';
                                   
-               -- Esegui l'equalizzazione dell'istogramma di un pixel                   
-               when EQUALIZATION1 =>
+               -- Esegui l'equalizzazione dell'istogramma di un pixel
+               when EQUALIZATION1 => address_new <= std_logic_vector(temp_add) + "0000000000000010";
+                                     state_next <= EQUALIZATION1_1;
+                                     o_en <= '1';
+                                     o_we <= '0';
                                   
-                                  curr_min <= unsigned(current_pixel_value - min_pixel_value);                 
+               when EQUALIZATION1_1 => current_pixel_value <= i_data;  
+                                       state_next <= EQUALIZATION1_2;
+                                       o_en <= '1';
+                                       o_we <= '0';
+               
+               when EQUALIZATION1_2 =>
+                                       curr_min <= unsigned(current_pixel_value - min_pixel_value);
+                                       state_next <= EQUALIZATION1_3;
+                                  
+               when EQUALIZATION1_3 =>
+                             
                                   temporary <= std_logic_vector(resize(signed(curr_min), 16));
                                   state_next <= EQUALIZATION2;
+                                  o_en <= '1';
+                                  o_we <= '0';
                                   
                when EQUALIZATION2 =>                   
                                   temp_pixel_value <= TO_INTEGER(unsigned(temporary) sll integer(shift_value));
                                   state_next <= EQUALIZATION3;
+                                  o_address <= address_new;
                                   
                when EQUALIZATION3 => 
                                   -- Attiva scrittura per il prossimo stato
                                   o_en <= '1';
                                   o_we <= '1';
+                                  
                                                     
                                   if(temp_pixel_value < 255) then
                                     new_pixel_value <= std_logic_vector(TO_UNSIGNED(temp_pixel_value, 8));
@@ -236,34 +263,43 @@ begin
                                   else
                                     new_pixel_value <= std_logic_vector(TO_UNSIGNED(255, 8));
                                   end if;
+                                 
+                                  state_next <= EQUALIZATION3_1;
+                                 
                                   
-                                  state_next <= EQUALIZATION4;
-                                  temp_add <= TO_UNSIGNED(num_pixels, 16);
+                when EQUALIZATION3_1 =>  
+                                    o_data <= new_pixel_value;
+                                    state_next <= EQUALIZATION4;
                                   
+                                                                    
                when EQUALIZATION4 =>
                                   -- pixels_array(address + num_pixels) <= new_pixel_value;
-                                  o_address <= address + std_logic_vector(temp_add);
                                   
                                   counter <= counter + 1;
                                   state_next <= WRITE_OUT;
                                   o_en <= '1';
                                   o_we <= '1'; 
                                   
-              when WRITE_OUT =>     
+              when WRITE_OUT =>   state_next <= WRITE_OUT1;
+                                  o_en <= '1';
+                                  o_we <= '0';
+                                  
+              when WRITE_OUT1 =>     
                                     o_en <= '1';
-                                    o_we <= '1';   
-                                    o_data <= new_pixel_value;
-                                    o_address <= address + "0000000000000001";
-                                    address <= address + "0000000000000001";
+                                    o_we <= '0';   
+                                    o_address <= address_curr + "0000000000000001";
+                                    address_curr <= address_curr + "0000000000000001";
+                                    address_new <= address_new + "0000000000000001";
                                     state_next <= WRITE_OUT2;
                                     
-                                    if(counter > num_pixels) then
+                                    if(counter >= num_pixels) then
                                         state_next <= DONE;
                                     end if;
+                                 
                                    
                when WRITE_OUT2 =>
-                                    current_pixel_value <= i_data;
-                                    state_next <= EQUALIZATION1;
+                                    --current_pixel_value <= i_data;
+                                    state_next <= EQUALIZATION1_1;
                 
                when DONE =>                               
                                     o_en <= '1';
