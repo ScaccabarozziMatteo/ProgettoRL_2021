@@ -30,7 +30,7 @@ end project_reti_logiche;
 
 architecture Behavioral of project_reti_logiche is
     -- Indica gli stati della FSM 
-    type state is (IDLE, SAVE_COLUMN, START, RESET, GET_COLUMN, GET_ROW, NUM_PIXELS1, GET_PIXELS, MAX_MIN, DELTA1, DELTA2, SHIFT, EQUALIZATION1, EQUALIZATION1_1, EQUALIZATION1_2, EQUALIZATION1_3, EQUALIZATION2, EQUALIZATION3, EQUALIZATION3_1, EQUALIZATION3_2, EQUALIZATION4, WRITE_OUT, WRITE_OUT1, WRITE_OUT2, DONE, LAST);
+    type state is (IDLE, SAVE_COLUMN, START, RESET, GET_COLUMN, GET_ROW, SAVE_ROW, NUM_PIXELS1, GET_PIXELS, MAX_MIN, DELTA1, DELTA2, SHIFT, EQUALIZATION1, EQUALIZATION1_1, EQUALIZATION1_2, EQUALIZATION1_3, EQUALIZATION2, EQUALIZATION3, EQUALIZATION3_1, EQUALIZATION3_2, EQUALIZATION4, WRITE_OUT, WRITE_OUT1, WRITE_OUT2, DONE, LAST);
     
     -- LOOKUP TABLE che rappresenta il log2 dal valore 1 al valore 256
     type array_log is array (0 to 255) of integer range 0 to 8;
@@ -62,7 +62,7 @@ architecture Behavioral of project_reti_logiche is
     signal temp_add, temp_pixel_value: unsigned(15 downto 0);
     
     -- Dimensioni immagine
-    signal row, column: integer range 0 to 127 := 0;
+    signal row, column: integer range 0 to 128 := 0;
     
     -- Segnali di check
     signal all_pixel, min_settato: boolean := false;
@@ -145,7 +145,6 @@ begin
            
             when SAVE_COLUMN =>         o_en <= '1';
                                         o_we <= '0';
-                                   
                                         state_next <= GET_ROW; 
                                    
                                    
@@ -153,9 +152,14 @@ begin
                                         o_we <= '0';
                                 
                                         row <= CONV_INTEGER(i_data);
-                                        state_next <= NUM_PIXELS1;
+                                        state_next <= SAVE_ROW;
                                         address_curr <= "0000000000000010";
+                                        
+             when SAVE_ROW =>           o_en <= '1';
+                                        o_we <= '0';
+                                        state_next <= NUM_PIXELS1;
                                         o_address <= "0000000000000010";
+             
            
              when NUM_PIXELS1 =>        o_en <= '1';
                                         o_we <= '0';
