@@ -2,7 +2,7 @@
 -- Progetto di Reti Logiche
 -- SCACCABAROZZI MATTEO - ALEXANDER TENEMAYA
 --
--- A.A. 2020/2- Prof. Palermo Gianluca
+-- A.A. 2020/2021 - Prof. Palermo Gianluca
 -- 
 ----------------------------------------------------------
 
@@ -145,7 +145,11 @@ begin
            
             when SAVE_COLUMN =>         o_en <= '1';
                                         o_we <= '0';
-                                        state_next <= GET_ROW; 
+                                        state_next <= GET_ROW;
+                                        
+                                        if(column = 0) then
+                                            state_next <= DONE;
+                                        end if; 
                                    
                                    
             when GET_ROW =>             o_en <= '1';
@@ -159,6 +163,10 @@ begin
                                         o_we <= '0';
                                         state_next <= NUM_PIXELS1;
                                         o_address <= "0000000000000010";
+                                        
+                                        if(row = 0) then
+                                            state_next <= DONE;
+                                        end if;
              
            
              when NUM_PIXELS1 =>        o_en <= '1';
