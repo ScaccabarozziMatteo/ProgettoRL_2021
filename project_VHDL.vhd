@@ -56,13 +56,13 @@ architecture Behavioral of project_reti_logiche is
     signal curr_min: unsigned(7 downto 0) := (others => '0');
     
     -- Contatore per lettura di ogni pixel
-    signal counter: std_logic_vector(15 downto 0);
-    signal num_pixels: integer range 0 to 16383;
+    signal counter: unsigned(15 downto 0);
+    signal num_pixels: unsigned (15 downto 0);
     signal address_curr, address_new: std_logic_vector(15 downto 0);
     signal temp_add, temp_pixel_value: unsigned(15 downto 0);
     
     -- Dimensioni immagine
-    signal row, column: integer range 0 to 128 := 0;
+    signal row, column: unsigned(7 downto 0) := (others => '0');
     
     -- Segnali di check
     signal all_pixel, min_settato: boolean := false;
@@ -104,6 +104,8 @@ begin
                             address_new <= "0000000000000000";
                             shift_value <= 0;
                             state_next <= IDLE;
+                            row <= "00000000";
+                            column <= "00000000";
             end if;
     
            
@@ -131,6 +133,8 @@ begin
                                         address_curr <= "0000000000000000";
                                         address_new <= "0000000000000000";
                                         shift_value <= 0;
+                                        row <= "00000000";
+                                        column <= "00000000";
                                                         
                                         state_next <= START;
 
@@ -139,7 +143,7 @@ begin
                                         o_we <= '0';
                                         o_address <= "0000000000000001";
                                    
-                                        column <= CONV_INTEGER(i_data);
+                                        column <= unsigned(i_data);
                                         state_next <= SAVE_COLUMN;
                                         address_curr <= "0000000000000001";
            
@@ -155,7 +159,7 @@ begin
             when GET_ROW =>             o_en <= '1';
                                         o_we <= '0';
                                 
-                                        row <= CONV_INTEGER(i_data);
+                                        row <= unsigned(i_data);
                                         state_next <= SAVE_ROW;
                                         address_curr <= "0000000000000010";
                                         
@@ -177,8 +181,7 @@ begin
              
                                  
             -- Stato GET_PIXELS salva i pixel
-            when GET_PIXELS =>          -- Converti num_pixels in Unsigned per dopo
-                                        temp_add <= TO_UNSIGNED(num_pixels, 16);
+            when GET_PIXELS =>          temp_add <= num_pixels;
                                         if (not all_pixel) then
                                             current_pixel_value <= i_data;
                                             counter <= counter + 1;
@@ -255,7 +258,7 @@ begin
                                         o_en <= '1';
                                         o_we <= '0';
                                   
-               when EQUALIZATION2 =>    temp_pixel_value <= unsigned(temporary) sll integer(shift_value);
+               when EQUALIZATION2 =>    temp_pixel_value <= unsigned(temporary) sll shift_value;
                                         state_next <= EQUALIZATION3;
                                         o_address <= address_new;
                                   
