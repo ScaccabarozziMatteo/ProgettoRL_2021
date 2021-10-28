@@ -2,7 +2,10 @@
  
 Prof. Palermo Gianluca
 
-## Sviluppatori
+## Developer
 [Scaccabarozzi Matteo](https://github.com/ScaccabarozziMatteo)
 
-[Alexander Tenemaya](https://github.com/AlexT1999)
+## Specification
+The purpose is writing VHDL code using Vivado IDE and implement an image histogram equalization algorithm through a Finite State Machine. [Link to PDF](https://github.com/ScaccabarozziMatteo/ProgettoRL_2021/blob/master/Specification/PFRL_Specifica_20_21_V3.pdf)
+
+[Report](https://github.com/ScaccabarozziMatteo/ProgettoRL_2021/blob/master/Documentation/10708407_10629376.pdf)
